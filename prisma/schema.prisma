@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model FraudReport {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  type        String    // email, phone, person
+  identifier  String    // email address, phone number, or name
+  description String
+  city        String?
+  street      String?
+  evidence    String?
+  votes       Vote[]
+  ipAddress   String
+  verified    Boolean   @default(false)
+  @@index([type, identifier])
+}
+
+model Vote {
+  id            String      @id @default(cuid())
+  fraudReport   FraudReport @relation(fields: [fraudReportId], references: [id])
+  fraudReportId String
+  ipAddress     String
+  createdAt     DateTime    @default(now())
+  type          VoteType
+  @@unique([fraudReportId, ipAddress])
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
