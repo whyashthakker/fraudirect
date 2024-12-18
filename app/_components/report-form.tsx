@@ -7,9 +7,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
+interface ValidationError {
+  path: (string | number)[];
+  message: string;
+}
+
 export function ReportForm() {
   const formRef = useRef<HTMLFormElement>(null)
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
   const [type, setType] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -21,9 +26,18 @@ export function ReportForm() {
     }
   }
 
+  const formatValidationErrors = (validationErrors: ValidationError[]) => {
+    const formattedErrors: Record<string, string> = {}
+    validationErrors.forEach((error) => {
+      const field = error.path[0] as string
+      formattedErrors[field] = error.message
+    })
+    return formattedErrors
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setError('')
+    setErrors({})
     setSuccess(false)
     setIsSubmitting(true)
 
@@ -45,70 +59,114 @@ export function ReportForm() {
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to submit report')
+        if (data.validationErrors) {
+          setErrors(formatValidationErrors(data.validationErrors))
+        } else {
+          setErrors({ form: data.error || 'Failed to submit report' })
+        }
+        return
       }
 
       setSuccess(true)
       resetForm()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit report. Please try again.')
+      setErrors({ form: 'An unexpected error occurred. Please try again.' })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const clearMessages = () => {
-    setError('')
+    setErrors({})
     setSuccess(false)
   }
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-      <Select 
-        value={type} 
-        onValueChange={(value) => {
-          setType(value)
-          clearMessages()
-        }} 
-        required
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select type of report" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="email">Email</SelectItem>
-          <SelectItem value="phone">Phone</SelectItem>
-          <SelectItem value="person">Person</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="space-y-2">
+        <Select 
+          value={type} 
+          onValueChange={(value) => {
+            setType(value)
+            clearMessages()
+          }} 
+          required
+        >
+          <SelectTrigger className={errors.type ? "border-red-500" : ""}>
+            <SelectValue placeholder="Select type of report" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="email">Email</SelectItem>
+            <SelectItem value="phone">Phone</SelectItem>
+            <SelectItem value="person">Person</SelectItem>
+          </SelectContent>
+        </Select>
+        {errors.type && (
+          <p className="text-sm text-red-500">{errors.type}</p>
+        )}
+      </div>
 
-      <Input 
-        name="identifier" 
-        placeholder="Email/Phone/Name" 
-        required 
-        onChange={clearMessages}
-      />
-      <Textarea 
-        name="description" 
-        placeholder="Description of fraudulent activity" 
-        required 
-        onChange={clearMessages}
-      />
-      <Input 
-        name="city" 
-        placeholder="City (optional)" 
-        onChange={clearMessages}
-      />
-      <Input 
-        name="street" 
-        placeholder="Street (optional)" 
-        onChange={clearMessages}
-      />
-      <Input 
-        name="evidence" 
-        placeholder="Evidence links (optional)" 
-        onChange={clearMessages}
-      />
+      <div className="space-y-2">
+        <Input 
+          name="identifier" 
+          placeholder="Email/Phone/Name" 
+          required 
+          onChange={clearMessages}
+          className={errors.identifier ? "border-red-500" : ""}
+        />
+        {errors.identifier && (
+          <p className="text-sm text-red-500">{errors.identifier}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Textarea 
+          name="description" 
+          placeholder="Description of fraudulent activity" 
+          required 
+          onChange={clearMessages}
+          className={errors.description ? "border-red-500" : ""}
+        />
+        {errors.description && (
+          <p className="text-sm text-red-500">{errors.description}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Input 
+          name="city" 
+          placeholder="City (optional)" 
+          onChange={clearMessages}
+          className={errors.city ? "border-red-500" : ""}
+        />
+        {errors.city && (
+          <p className="text-sm text-red-500">{errors.city}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Input 
+          name="street" 
+          placeholder="Street (optional)" 
+          onChange={clearMessages}
+          className={errors.street ? "border-red-500" : ""}
+        />
+        {errors.street && (
+          <p className="text-sm text-red-500">{errors.street}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Input 
+          name="evidence" 
+          placeholder="Evidence links (optional)" 
+          onChange={clearMessages}
+          className={errors.evidence ? "border-red-500" : ""}
+        />
+        {errors.evidence && (
+          <p className="text-sm text-red-500">{errors.evidence}</p>
+        )}
+      </div>
 
       <Button 
         type="submit" 
@@ -117,9 +175,9 @@ export function ReportForm() {
         {isSubmitting ? 'Submitting...' : 'Submit Report'}
       </Button>
 
-      {error && (
+      {errors.form && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{errors.form}</AlertDescription>
         </Alert>
       )}
 

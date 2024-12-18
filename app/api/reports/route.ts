@@ -20,14 +20,25 @@ export async function POST(req: Request) {
 
   } catch (error) {
     if (error instanceof ZodError) {
+      const formattedErrors = error.errors.map(err => ({
+        path: err.path,
+        message: err.message
+      }))
       return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
+        { 
+          success: false,
+          error: 'Validation failed',
+          validationErrors: formattedErrors 
+        },
         { status: 400 }
       )
     }
     console.error('Error creating report:', error)
     return NextResponse.json(
-      { error: 'Failed to create report' },
+      { 
+        success: false,
+        error: 'Failed to create report' 
+      },
       { status: 500 }
     )
   }
